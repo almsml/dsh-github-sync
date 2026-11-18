@@ -110,6 +110,7 @@ function applyConfigPatch(patch) {
     next.repo = value ? normalizeRepo(value) : ''
   }
   if (typeof patch.branch === 'string' && patch.branch.trim()) next.branch = patch.branch.trim()
+  if (typeof patch.proxy === 'string') next.proxy = patch.proxy.trim()
   if (typeof patch.token === 'string' && patch.token.trim()) next.token = patch.token.trim()
   if (patch.clearToken === true) next.token = ''
   for (const key of ['autoPush', 'pullOnStart', 'syncSessions', 'writeTranscripts', 'excludeSecrets', 'enabled']) {
@@ -323,6 +324,7 @@ export function apply(ctx, config) {
               workspace: config.workspace,
               repo: config.repo ? displayRepo(config.repo) : '',
               branch: config.branch,
+              proxy: config.proxy,
               hasToken: Boolean(config.token),
               enabled: config.enabled,
               autoPush: config.autoPush,
@@ -352,6 +354,7 @@ export function apply(ctx, config) {
               workspace: updated.workspace,
               repo: updated.repo ? displayRepo(updated.repo) : '',
               branch: updated.branch,
+              proxy: updated.proxy,
               hasToken: Boolean(updated.token),
               enabled: updated.enabled,
               autoPush: updated.autoPush,

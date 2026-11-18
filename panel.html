@@ -114,6 +114,11 @@
         <div class="hint">这个目录会被当成 git 仓库同步；会话记录取该工作区的 DSH 对话。</div>
       </div>
       <div>
+        <label for="proxy">HTTP(S) 代理（可选）</label>
+        <input id="proxy" type="text" placeholder="http://127.0.0.1:7890" />
+        <div class="hint">直连 github.com 不通时填本机代理；留空则用 HTTPS_PROXY 环境变量。</div>
+      </div>
+      <div>
         <label for="token">Personal Access Token</label>
         <input id="token" type="password" placeholder="ghp_… / github_pat_…（留空表示用系统 git 凭据）" autocomplete="off" />
         <div class="hint" id="tokenHint">只保存在本机 ~/.dsh/github-sync/config.json，不会进仓库，也不会写进对话。</div>
@@ -200,6 +205,7 @@ function readForm() {
     repo: $('repo').value.trim(),
     branch: $('branch').value.trim(),
     workspace: $('workspace').value.trim(),
+    proxy: $('proxy').value.trim(),
     token: $('token').value.trim(),
     enabled: $('enabled').checked,
     autoPush: $('autoPush').checked,
@@ -215,6 +221,7 @@ function applyConfig(config) {
   $('repo').value = config.repo || ''
   $('branch').value = config.branch || 'main'
   $('workspace').value = config.workspace || ''
+  $('proxy').value = config.proxy || ''
   $('enabled').checked = config.enabled !== false
   $('autoPush').checked = config.autoPush !== false
   $('syncSessions').checked = config.syncSessions !== false
