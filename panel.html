@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GitHub 同步 · DSH</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1e222b;
+    --line: #2a2f3a;
+    --text: #e8eaf0;
+    --muted: #98a0b3;
+    --accent: #4d8dff;
+    --accent-2: #6ee7b7;
+    --danger: #ff6b6b;
+    --warn: #ffc857;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(1200px 600px at 20% -10%, #1b2740 0%, var(--bg) 55%);
+    color: var(--text);
+    font: 14px/1.6 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 32px 20px 64px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: .3px; }
+  h1 span { color: var(--accent); }
+  .pill {
+    font-size: 12px; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+  }
+  .pill.ok { color: var(--accent-2); border-color: #2e5b4a; }
+  .pill.bad { color: var(--danger); border-color: #5b2e2e; }
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,.02), transparent), var(--panel);
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 20px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 0 0 14px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 680px) { .grid { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  input[type=text], input[type=password], input[type=number] {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--line);
+    color: var(--text); border-radius: 8px; padding: 10px 12px; font: inherit; outline: none;
+  }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(77,141,255,.15); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .toggles { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 16px; }
+  .toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
+  .toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+  button {
+    font: inherit; border-radius: 8px; padding: 9px 16px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+    transition: .15s ease;
+  }
+  button:hover { border-color: #3b4353; transform: translateY(-1px); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #08152c; font-weight: 600; }
+  button.primary:hover { background: #6aa1ff; }
+  button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .status {
+    white-space: pre-wrap; background: #0c0e12; border: 1px solid var(--line);
+    border-radius: 10px; padding: 14px; font: 12.5px/1.7 Consolas, "Cascadia Mono", monospace;
+    color: #cfd6e6; min-height: 90px;
+  }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .muted { color: var(--muted); }
+  .small { font-size: 12px; }
+  code { background: #0c0e12; border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; font-size: 12px; }
+  ol { margin: 8px 0 0; padding-left: 20px; color: var(--muted); }
+  ol b { color: var(--text); font-weight: 600; }
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+    background: #111826; border: 1px solid var(--line); color: var(--text);
+    padding: 10px 18px; border-radius: 10px; opacity: 0; pointer-events: none; transition: .2s ease;
+    box-shadow: 0 10px 30px rgba(0,0,0,.4); max-width: 80vw;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.bad { border-color: #5b2e2e; color: #ffb4b4; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>GitHub <span>同步</span></h1>
+    <div class="row">
+      <span id="statePill" class="pill">读取中…</span>
+    </div>
+  </header>
+
+  <div class="card">
+    <h2>仓库连接</h2>
+    <div class="grid">
+      <div>
+        <label for="repo">GitHub 仓库</label>
+        <input id="repo" type="text" placeholder="owner/repo 或 https://github.com/owner/repo.git" />
+        <div class="hint">支持 owner/repo、HTTPS、SSH；私有仓库请填 token。</div>
+      </div>
+      <div>
+        <label for="branch">分支</label>
+        <input id="branch" type="text" placeholder="main" />
+        <div class="hint">首次推送会在仓库里创建这个分支。</div>
+      </div>
+      <div>
+        <label for="workspace">工作区目录</label>
+        <input id="workspace" type="text" placeholder="D:\path\to\project" />
+        <div class="hint">这个目录会被当成 git 仓库同步；会话记录取该工作区的 DSH 对话。</div>
+      </div>
+      <div>
+        <label for="token">Personal Access Token</label>
+        <input id="token" type="password" placeholder="ghp_… / github_pat_…（留空表示用系统 git 凭据）" autocomplete="off" />
+        <div class="hint" id="tokenHint">只保存在本机 ~/.dsh/github-sync/config.json，不会进仓库，也不会写进对话。</div>
+      </div>
+    </div>
+
+    <div class="toggles">
+      <label class="toggle"><input id="enabled" type="checkbox" /> 启用同步</label>
+      <label class="toggle"><input id="autoPush" type="checkbox" /> 每轮对话后自动推送</label>
+      <label class="toggle"><input id="syncSessions" type="checkbox" /> 同步该工作区的对话</label>
+      <label class="toggle"><input id="writeTranscripts" type="checkbox" /> 生成可读 Markdown</label>
+      <label class="toggle"><input id="excludeSecrets" type="checkbox" /> 自动排除 .env / 密钥</label>
+    </div>
+
+    <div class="grid" style="margin-top:16px">
+      <div>
+        <label for="maxFileMB">单文件上限（MB）</label>
+        <input id="maxFileMB" type="number" min="1" max="2048" />
+        <div class="hint">超过上限的未跟踪文件会被写进 .git/info/exclude，不上传。</div>
+      </div>
+      <div>
+        <label for="maxSessionMB">单会话上限（MB）</label>
+        <input id="maxSessionMB" type="number" min="1" max="1024" />
+        <div class="hint">特别大的会话（含大量工具输出）会跳过，避免仓库膨胀。</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="save" class="primary">保存设置</button>
+      <button id="test">测试连接</button>
+      <button id="sync">立即同步</button>
+      <button id="pull">拉取远端</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>状态</h2>
+    <div id="status" class="status">读取中…</div>
+    <div class="hint" id="repoPath"></div>
+  </div>
+
+  <div class="card">
+    <h2>怎么用</h2>
+    <ol>
+      <li>在要同步的会话里执行 <code>/github-sync init</code>，把该会话的工作区设为同步目标（或直接在上面填目录）。</li>
+      <li>填 <b>owner/repo</b> 和 token，点 <b>保存设置 → 测试连接</b>。</li>
+      <li>点 <b>立即同步</b> 完成首次推送。之后每轮对话结束都会自动提交推送。</li>
+      <li>另一台设备：装同一个插件、填同一个仓库，打开 DSH 或点 <b>拉取远端</b>，代码和对话会一起下来。</li>
+      <li>对话会写进仓库的 <code>.dsh-sync/</code>：原日志 + 可读 Markdown；拉取后刷新会话列表即可看到并接着聊。</li>
+    </ol>
+    <div class="hint" style="margin-top:12px">仓库里不会出现 token；同步只改 <code>.git/info/exclude</code>，不动你的 <code>.gitignore</code>。</div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id)
+const API = '/dsh-github-sync/api'
+let busy = false
+
+function toast(message, bad) {
+  const el = $('toast')
+  el.textContent = message
+  el.className = 'toast show' + (bad ? ' bad' : '')
+  clearTimeout(toast._t)
+  toast._t = setTimeout(() => { el.className = 'toast' }, 3200)
+}
+
+function setBusy(value) {
+  busy = value
+  for (const id of ['save', 'test', 'sync', 'pull']) $(id).disabled = value
+}
+
+async function call(path, options) {
+  const res = await fetch(path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, options))
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || data.ok === false) throw new Error(data.error || data.message || ('HTTP ' + res.status))
+  return data
+}
+
+function readForm() {
+  return {
+    repo: $('repo').value.trim(),
+    branch: $('branch').value.trim(),
+    workspace: $('workspace').value.trim(),
+    token: $('token').value.trim(),
+    enabled: $('enabled').checked,
+    autoPush: $('autoPush').checked,
+    syncSessions: $('syncSessions').checked,
+    writeTranscripts: $('writeTranscripts').checked,
+    excludeSecrets: $('excludeSecrets').checked,
+    maxFileMB: Number($('maxFileMB').value) || 50,
+    maxSessionMB: Number($('maxSessionMB').value) || 8,
+  }
+}
+
+function applyConfig(config) {
+  $('repo').value = config.repo || ''
+  $('branch').value = config.branch || 'main'
+  $('workspace').value = config.workspace || ''
+  $('enabled').checked = config.enabled !== false
+  $('autoPush').checked = config.autoPush !== false
+  $('syncSessions').checked = config.syncSessions !== false
+  $('writeTranscripts').checked = config.writeTranscripts !== false
+  $('excludeSecrets').checked = config.excludeSecrets !== false
+  $('maxFileMB').value = config.maxFileMB || 50
+  $('maxSessionMB').value = config.maxSessionMB || 8
+  $('token').value = ''
+  $('token').placeholder = config.hasToken
+    ? '已保存（留空则保持不变）'
+    : 'ghp_… / github_pat_…（留空表示用系统 git 凭据）'
+  $('tokenHint').textContent = config.hasToken
+    ? '已保存 token。想更换就填新的；想清空请在这里填 - 再保存。'
+    : '只保存在本机 ~/.dsh/github-sync/config.json，不会进仓库，也不会写进对话。'
+}
+
+function renderStatus(status) {
+  const lines = []
+  const pill = $('statePill')
+  if (!status.configured) {
+    pill.textContent = '未配置'
+    pill.className = 'pill'
+    lines.push('还没配置：先执行 /github-sync init 指定工作区，再填仓库与 token。')
+  } else {
+    const ok = status.state && status.state.lastOk !== false
+    pill.textContent = status.running ? '同步中…' : (ok ? '已配置' : '上次失败')
+    pill.className = 'pill ' + (ok ? 'ok' : 'bad')
+    lines.push('仓库    ' + status.repo + '#' + status.branch)
+    lines.push('工作区  ' + status.workspace)
+    lines.push('开关    自动推送 ' + (status.autoPush ? '开' : '关') + ' · 对话同步 ' + (status.syncSessions ? '开' : '关') + ' · token ' + (status.hasToken ? '已保存' : '无'))
+    if (status.git) {
+      lines.push('本地    ' + status.git.changes + ' 项改动 · ' + (status.git.head || '还没有提交'))
+      if (status.git.sample && status.git.sample.length) {
+        lines.push('       ' + status.git.sample.slice(0, 5).join('\n       '))
+      }
+      $('repoPath').textContent = status.git.root ? 'git 根目录：' + status.git.root : ''
+    }
+    if (status.sessions) lines.push('会话    ' + status.sessions.exported + ' 个已导出到仓库')
+    if (status.state && status.state.lastSyncAt) {
+      lines.push('上次    ' + new Date(status.state.lastSyncAt).toLocaleString('zh-CN') + ' · ' + (status.state.lastOk ? '成功' : '失败'))
+      if (status.state.lastError) lines.push('错误    ' + status.state.lastError)
+      if (status.state.lastMessage) lines.push('结果    ' + status.state.lastMessage)
+    }
+  }
+  $('status').textContent = lines.join('\n')
+}
+
+async function load() {
+  try {
+    const data = await call(API + '/state')
+    applyConfig(data.config)
+    renderStatus(data.status)
+  } catch (error) {
+    $('statePill').textContent = '读取失败'
+    $('statePill').className = 'pill bad'
+    $('status').textContent = '读取配置失败：' + error.message
+  }
+}
+
+$('save').addEventListener('click', async () => {
+  setBusy(true)
+  try {
+    const form = readForm()
+    const patch = { ...form }
+    if (form.token === '-') { patch.clearToken = true; delete patch.token }
+    if (!form.token) delete patch.token
+    const data = await call(API + '/config', { method: 'POST', body: JSON.stringify(patch) })
+    applyConfig(data.config)
+    toast('已保存')
+    const state = await call(API + '/state')
+    renderStatus(state.status)
+  } catch (error) {
+    toast(error.message, true)
+  } finally {
+    setBusy(false)
+  }
+})
+
+$('test').addEventListener('click', async () => {
+  setBusy(true)
+  try {
+    const data = await call(API + '/action', { method: 'POST', body: JSON.stringify({ action: 'test' }) })
+    toast(data.message)
+    $('status').textContent = data.message
+  } catch (error) {
+    toast(error.message, true)
+    $('status').textContent = error.message
+  } finally {
+    setBusy(false)
+  }
+})
+
+async function run(action) {
+  setBusy(true)
+  $('status').textContent = '同步中…（首次推送可能较久）'
+  try {
+    const data = await call(API + '/action', { method: 'POST', body: JSON.stringify({ action }) })
+    toast(data.message)
+    await load()
+  } catch (error) {
+    toast(error.message, true)
+    $('status').textContent = '失败：' + error.message
+  } finally {
+    setBusy(false)
+  }
+}
+
+$('sync').addEventListener('click', () => run('sync'))
+$('pull').addEventListener('click', () => run('pull'))
+
+load()
+setInterval(() => { if (!busy) load() }, 15000)
+</script>
+</body>
+</html>

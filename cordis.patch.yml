@@ -1,0 +1,7 @@
+# dsh-github-sync 的加载补丁。
+# 插件 id 用 github-sync，包名必须是真实包名（cordis 按 name 解析模块）。
+# 配置默认从 ~/.dsh/github-sync/config.json 读；这里只放与机器无关的默认值，
+# 所以换设备装同一个包也能直接跑。
+- insert:
+    - id: github-sync
+      name: dsh-github-sync
