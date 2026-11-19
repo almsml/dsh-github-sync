@@ -18,3 +18,8 @@
 
 - 首个版本：工作区自动 `git add/commit/push`、DSH 会话导出/导入、可读 Markdown 记录、
   本地面板 `/dsh-github-sync`、`github_sync` 工具与 `/github-sync` 命令。
+
+## 0.3.1
+
+- 修复：package.json 带了 UTF-8 BOM，导致 dsh plugin add / pnpm 校验时报 Unexpected token '﻿'。现在是无 BOM 的标准 JSON。
+

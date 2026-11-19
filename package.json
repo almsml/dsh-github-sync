@@ -1,6 +1,6 @@
-﻿{
+{
   "name": "dsh-github-sync",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "把 DSH 工作区自动同步到 GitHub：每轮对话结束后提交并推送代码与文件，同时把该工作区的对话记录导出成可读 Markdown，换设备拉取后能接着聊。",
   "type": "module",
   "main": "index.js",
