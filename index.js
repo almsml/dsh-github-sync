@@ -16,6 +16,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createSyncEngine } from './lib/sync.js'
+import { openExternal } from './lib/open.js'
 import { simpleTool } from './lib/tool.js'
 import {
   displayRepo, isConfigured, normalizeRepo, readConfig, writeConfig,
@@ -123,6 +124,24 @@ function applyConfigPatch(patch) {
 }
 
 export function apply(ctx, config) {
+  let webServerRef = null
+  const panelUrl = () => {
+    try {
+      if (webServerRef && typeof webServerRef.getOrigin === 'function') {
+        return `${webServerRef.getOrigin()}${ROUTE}`
+      }
+    } catch {
+      /* 端口还没绑定 */
+    }
+    const envUrl = String(process.env.DSH_WEB_URL || '').trim()
+    if (/^https?:\/\//i.test(envUrl)) return `${envUrl.replace(/\/+$/, '')}${ROUTE}`
+    return null
+  }
+  const openPanel = () => {
+    const url = panelUrl()
+    if (!url) return { url: null, opened: false }
+    return { url, opened: openExternal(url) }
+  }
   const engine = createSyncEngine({
     logger: {
       info: (message) => ctx.logger?.info?.(`[github-sync] ${message}`),
@@ -178,7 +197,16 @@ export function apply(ctx, config) {
           if (!cwd) return { ok: false, message: '拿不到当前会话的工作区，请用 /github-sync workspace <路径> 指定' }
           applyConfigPatch({ workspace: cwd })
           const state = await engine.status()
-          return { ok: true, message: `已把同步工作区设为：${cwd}\n接下来在 /dsh-github-sync 面板填仓库与 token。\n\n${statusText(state)}`, state }
+          const panel = openPanel()
+          return {
+            ok: true,
+            message: `已把同步工作区设为：${cwd}\n`
+              + (panel.url
+                ? `${panel.opened ? '已打开配置面板' : '配置面板'}：${panel.url}\n`
+                : `配置面板：${ROUTE}\n`)
+              + statusText(state),
+            state,
+          }
         }
         const result = await engine.syncNow({
           reason: action === 'push' ? '手动推送' : action === 'pull' ? '手动拉取' : '手动同步',
@@ -219,7 +247,14 @@ export function apply(ctx, config) {
             const cwd = invocation?.agent?.session?.header?.cwd
             if (!cwd) return { kind: 'error', text: '拿不到当前会话的工作区，请用 /github-sync workspace <路径>' }
             applyConfigPatch({ workspace: cwd })
-            return { kind: 'success', text: `已把同步工作区设为：${cwd}\n接下来在 ${ROUTE} 面板填仓库与 token。` }
+            const panel = openPanel()
+            return {
+              kind: 'success',
+              text: `已把同步工作区设为：${cwd}\n`
+                + (panel.url
+                  ? `${panel.opened ? '已打开配置面板' : '配置面板'}：${panel.url}\n填好仓库与 token 后点「立即同步」即可。`
+                  : '配置面板：/dsh-github-sync（拿不到完整地址，请在浏览器里打开 DSH 后加这个路径）'),
+            }
           }
           if (action === 'workspace') {
             if (!rest) return { kind: 'error', text: '用法：/github-sync workspace D:\\path\\to\\project' }
@@ -258,7 +293,9 @@ export function apply(ctx, config) {
             return { kind: result.ok ? 'success' : 'error', text: result.message }
           }
           if (action === 'open') {
-            return { kind: 'success', text: `配置面板：${ROUTE}（在 DSH 的 Web 地址后面加上这个路径）` }
+            const panel = openPanel()
+            if (!panel.url) return { kind: 'error', text: `拿不到面板完整地址，请手动访问 DSH 地址后的 ${ROUTE}` }
+            return { kind: 'success', text: `已${panel.opened ? '打开' : '生成'}配置面板：${panel.url}` }
           }
           if (action === 'push' || action === 'pull' || action === 'sync') {
             const result = await engine.syncNow({
@@ -281,6 +318,7 @@ export function apply(ctx, config) {
 
   // ---- 本地面板 + API ----
   ctx.inject(['webServer'], (child) => {
+    webServerRef = child.webServer
     const register = (path, handler) => {
       try {
         return child.webServer.register({ kind: 'exact', path, handler })
@@ -320,6 +358,7 @@ export function apply(ctx, config) {
           const state = await engine.status()
           sendJson(res, 200, {
             ok: true,
+            panelUrl: panelUrl(),
             config: {
               workspace: config.workspace,
               repo: config.repo ? displayRepo(config.repo) : '',

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- 新增：`/github-sync init`（以及 `github_sync` 的 `init` 动作）在设置好工作区后，
+  自动用系统默认浏览器打开配置面板 `http://127.0.0.1:<当前端口>/dsh-github-sync`；
+  `/github-sync open` 也可以随时重新打开。
+- 面板地址通过 `webServer.getOrigin()` 实时获取，DSH 重启换端口后无需改配置。
+
 ## 0.2.0
 
 - 新增：可选 HTTP(S) 代理。面板里填 `http://127.0.0.1:7890` 之类的地址即可；

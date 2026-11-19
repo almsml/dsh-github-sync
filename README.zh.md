@@ -20,13 +20,16 @@
 ### A. 最快：在要同步的会话里
 
 ```text
-/github-sync init                    # 把当前会话的工作区设为同步目标
+/github-sync init                    # 把当前会话的工作区设为同步目标，并自动打开配置面板
 /github-sync repo owner/repo
 /github-sync token ghp_xxxxxxxx      # 私有仓库需要；不会写进会话日志
 /github-sync push                    # 首次推送
 ```
 
 之后每轮对话结束都会自动提交推送。用 `/github-sync status` 随时看状态。
+
+> `init` 会弹出系统默认浏览器打开 `http://127.0.0.1:<当前端口>/dsh-github-sync`；
+> 也可以随时用 `/github-sync open` 重新打开。端口每次重启会变，插件会自动取当前端口。
 
 ### B. 面板
 
